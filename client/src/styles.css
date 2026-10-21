@@ -194,13 +194,15 @@ button:disabled {
 }
 
 .search-control button {
-  width: 35px;
+  flex: 0 0 auto;
   height: 35px;
+  padding: 0 10px;
   border: 0;
   border-radius: 7px;
   background: var(--green);
   color: white;
-  font-size: 20px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .destination-summary {
@@ -237,12 +239,23 @@ button:disabled {
 }
 
 .destination-summary div span,
-.place-card-content span {
+.place-card-address {
   overflow: hidden;
   color: #929d95;
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.place-card-description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 2px 0;
+  color: #697970;
+  font-size: 10px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .explore-section {
@@ -362,8 +375,9 @@ button:disabled {
 }
 
 .place-card {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr) auto;
+  align-items: start;
   gap: 9px;
   min-width: 0;
   padding: 9px 8px;
@@ -384,7 +398,12 @@ button:disabled {
 }
 
 .place-card-content {
+  min-width: 0;
   flex: 1;
+}
+
+.place-card-content strong {
+  display: block;
 }
 
 .save-button {
@@ -402,6 +421,28 @@ button:disabled {
 .save-button.is-saved {
   background: #fcf2ec;
   color: #d87f52;
+}
+
+.place-card-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.mark-button {
+  width: 29px;
+  height: 29px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #9da9a0;
+  font-size: 18px;
+}
+
+.mark-button:hover,
+.mark-button.is-marked {
+  background: #eef5f0;
+  color: var(--deep-green);
 }
 
 .empty-state {
@@ -780,7 +821,7 @@ body {
 }
 
 .destination-summary div span,
-.place-card-content span {
+.place-card-address {
   color: #9baa9f;
 }
 
@@ -828,6 +869,20 @@ body {
 .save-button.is-saved {
   background: #45332d;
   color: #f0a078;
+}
+
+.mark-button {
+  color: #9aaca0;
+}
+
+.mark-button:hover,
+.mark-button.is-marked {
+  background: #294638;
+  color: #c2ddcb;
+}
+
+.place-card-description {
+  color: #b3c0b7;
 }
 
 .empty-state {

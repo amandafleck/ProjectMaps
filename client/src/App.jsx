@@ -63,7 +63,8 @@ function App() {
   const [destination, setDestination] = useState(null);
   const [category, setCategory] = useState(categories[0].id);
   const [places, setPlaces] = useState([]);
-  const [savedPlaces, setSavedPlaces] = useState([]);
+  const [favoritePlaces, setFavoritePlaces] = useState([]);
+  const [markedPlaces, setMarkedPlaces] = useState([]);
   const [pendingPoint, setPendingPoint] = useState(null);
   const [pointName, setPointName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -128,11 +129,24 @@ function App() {
     }
   }
 
-  function toggleSaved(place) {
-    setSavedPlaces((current) =>
-      current.some((saved) => saved.id === place.id)
-        ? current.filter((saved) => saved.id !== place.id)
+  function toggleFavorite(place) {
+    setFavoritePlaces((current) =>
+      current.some((favorite) => favorite.id === place.id)
+        ? current.filter((favorite) => favorite.id !== place.id)
         : [...current, place],
+    );
+  }
+
+  function toggleMarked(place) {
+    setMarkedPlaces((current) =>
+      current.some((marked) => marked.id === place.id)
+        ? current.filter((marked) => marked.id !== place.id)
+        : [...current, place],
+    );
+    setNotice(
+      markedPlaces.some((marked) => marked.id === place.id)
+        ? `"${place.name}" foi removido do mapa.`
+        : `"${place.name}" foi marcado no mapa.`,
     );
   }
 
@@ -147,12 +161,13 @@ function App() {
     const name = pointName.trim();
     if (!name || !pendingPoint) return;
 
-    setSavedPlaces((current) => [
+    setMarkedPlaces((current) => [
       ...current,
       {
         id: `manual-${Date.now()}`,
         name,
         address: "Ponto marcado no mapa",
+        description: "Ponto personalizado marcado no mapa.",
         category: "personalizado",
         lat: pendingPoint.lat,
         lon: pendingPoint.lon,
@@ -160,8 +175,52 @@ function App() {
       },
     ]);
     setPendingPoint(null);
-    setNotice(`"${name}" foi adicionado aos seus lugares salvos.`);
+    setNotice(`"${name}" foi marcado no mapa.`);
   }
+
+  function renderPlaceCard(place) {
+    const isFavorite = favoritePlaces.some((item) => item.id === place.id);
+    const isMarked = markedPlaces.some((item) => item.id === place.id);
+
+    return (
+      <article className="place-card" key={place.id}>
+        <span className="place-card-mark" aria-hidden="true">⌖</span>
+        <div className="place-card-content">
+          <strong title={place.name}>{place.name}</strong>
+          <p className="place-card-description">
+            {place.description || "Descrição não informada."}
+          </p>
+          <span className="place-card-address">
+            {place.address || "Endereço não informado"}
+          </span>
+        </div>
+        <div className="place-card-actions">
+          <button
+            className={`save-button ${isFavorite ? "is-saved" : ""}`}
+            onClick={() => toggleFavorite(place)}
+            aria-label={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+            title={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+          >
+            {isFavorite ? "♥" : "♡"}
+          </button>
+          <button
+            className={`mark-button ${isMarked ? "is-marked" : ""}`}
+            onClick={() => toggleMarked(place)}
+            aria-label={isMarked ? "Remover marcação do mapa" : "Marcar no mapa"}
+            title={isMarked ? "Remover marcação do mapa" : "Marcar no mapa"}
+          >
+            ⌖
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  const mapPlaces = markedPlaces;
+  const ideaPlaces = [...favoritePlaces, ...markedPlaces].filter(
+    (place, index, allPlaces) =>
+      allPlaces.findIndex((item) => item.id === place.id) === index,
+  );
 
   const center = destination
     ? [destination.lat, destination.lon]
@@ -177,7 +236,7 @@ function App() {
         <div className="topbar-caption">SEU PRÓXIMO LUGAR FAVORITO</div>
         <div className="saved-counter">
           <span className="saved-counter-icon">♡</span>
-          <span>{savedPlaces.length} salvos</span>
+          <span>{favoritePlaces.length} favoritos</span>
         </div>
       </header>
 
@@ -200,7 +259,7 @@ function App() {
                 placeholder="Ex.: Porto de Galinhas"
               />
               <button type="submit" aria-label="Pesquisar destino" disabled={loading}>
-                →
+                Pesquisar
               </button>
             </div>
           </form>
@@ -250,55 +309,27 @@ function App() {
 
           <div className="places-section">
             <div className="section-title-row places-title">
-              <h2>{places.length ? "Lugares encontrados" : "Sua lista de ideias"}</h2>
-              <span className="list-count">{places.length || savedPlaces.length}</span>
+              <h2>
+                {places.length
+                  ? "Lugares encontrados"
+                  : ideaPlaces.length
+                    ? "Favoritos e pontos marcados"
+                    : "Sua lista de ideias"}
+              </h2>
+              <span className="list-count">{places.length || ideaPlaces.length}</span>
             </div>
             {places.length ? (
               <div className="places-list">
-                {places.map((place) => {
-                  const saved = savedPlaces.some((item) => item.id === place.id);
-                  return (
-                    <article className="place-card" key={place.id}>
-                      <span className="place-card-mark">⌖</span>
-                      <div className="place-card-content">
-                        <strong>{place.name}</strong>
-                        <span>{place.address || "Endereço não informado"}</span>
-                      </div>
-                      <button
-                        className={`save-button ${saved ? "is-saved" : ""}`}
-                        onClick={() => toggleSaved(place)}
-                        aria-label={saved ? "Remover dos salvos" : "Salvar lugar"}
-                        title={saved ? "Remover dos salvos" : "Salvar lugar"}
-                      >
-                        {saved ? "♥" : "♡"}
-                      </button>
-                    </article>
-                  );
-                })}
+                {places.map(renderPlaceCard)}
               </div>
-            ) : savedPlaces.length ? (
+            ) : ideaPlaces.length ? (
               <div className="places-list">
-                {savedPlaces.map((place) => (
-                  <article className="place-card saved-card" key={place.id}>
-                    <span className="place-card-mark">⌖</span>
-                    <div className="place-card-content">
-                      <strong>{place.name}</strong>
-                      <span>{place.address || "Ponto salvo"}</span>
-                    </div>
-                    <button
-                      className="save-button is-saved"
-                      onClick={() => toggleSaved(place)}
-                      aria-label="Remover dos salvos"
-                    >
-                      ♥
-                    </button>
-                  </article>
-                ))}
+                {ideaPlaces.map(renderPlaceCard)}
               </div>
             ) : (
               <div className="empty-state">
                 <span className="empty-state-icon">✳</span>
-                <p>Seus lugares salvos aparecem aqui.</p>
+                <p>Seus favoritos e pontos marcados aparecem aqui.</p>
                 <span>Pesquise um destino para começar.</span>
               </div>
             )}
@@ -364,7 +395,7 @@ function App() {
               </Marker>
             )}
             {places
-              .filter((place) => !savedPlaces.some((saved) => saved.id === place.id))
+              .filter((place) => !mapPlaces.some((marked) => marked.id === place.id))
               .map((place) => (
               <CircleMarker
                 key={place.id}
@@ -375,18 +406,22 @@ function App() {
                 <Popup>
                   <strong>{place.name}</strong>
                   <br />
+                  {place.description}
+                  <br />
                   {place.address}
                 </Popup>
               </CircleMarker>
               ))}
-            {savedPlaces.map((place) => (
+            {mapPlaces.map((place) => (
               <Marker
-                key={`saved-${place.id}`}
+                key={`marked-${place.id}`}
                 position={[place.lat, place.lon]}
                 icon={pinIcon}
               >
                 <Popup>
                   <strong>{place.name}</strong>
+                  <br />
+                  {place.description}
                   <br />
                   {place.address}
                 </Popup>
@@ -403,7 +438,7 @@ function App() {
           </MapContainer>
           <div className="map-legend">
             <span><i className="legend-dot found-dot" /> Lugares encontrados</span>
-            <span><i className="legend-dot saved-dot" /> Lugares salvos</span>
+            <span><i className="legend-dot saved-dot" /> Pontos marcados</span>
           </div>
         </section>
       </section>

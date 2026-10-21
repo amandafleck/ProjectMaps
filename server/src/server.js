@@ -1,12 +1,24 @@
-import "dotenv/config";
+import dotenv from "dotenv";
 import cors from "cors";
 import express from "express";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const serverDirectory = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(serverDirectory, "../.env") });
+dotenv.config({ path: resolve(serverDirectory, "../../.env") });
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
-const geoapifyApiKey = process.env.GEOAPIFY_API_KEY;
+const geoapifyApiKey = process.env.GEOAPIFY_API_KEY || process.env.API_KEY;
 const missingApiKeyMessage =
-  "Configure GEOAPIFY_API_KEY no arquivo server/.env e reinicie o servidor.";
+  "Configure GEOAPIFY_API_KEY em server/.env ou API_KEY no .env da raiz e reinicie o servidor.";
+const categoryLabels = new Map([
+  ["tourism", "Atração turística"],
+  ["catering.restaurant", "Restaurante"],
+  ["accommodation.hotel", "Hotel"],
+  ["leisure.park", "Parque"],
+]);
 const allowedCategories = new Set([
   "tourism",
   "catering.restaurant",
@@ -113,14 +125,32 @@ app.get("/api/places", async (request, response) => {
     }
 
     const data = await result.json();
-    const places = (data.features ?? []).map(({ properties }) => ({
-      id: properties.place_id,
-      name: properties.name || properties.address_line1 || "Lugar sem nome",
-      address: properties.formatted,
-      category: properties.categories?.[0] ?? category,
-      lat: properties.lat,
-      lon: properties.lon,
-    }));
+    const places = (data.features ?? []).map(({ properties }) => {
+      const sourceDescription = [
+        properties.description,
+        properties.datasource?.raw?.description,
+      ].find((value) => typeof value === "string" && value.trim());
+      const nearbyArea =
+        properties.city ||
+        properties.county ||
+        properties.state ||
+        properties.country ||
+        properties.formatted;
+
+      return {
+        id: properties.place_id,
+        name: properties.name || properties.address_line1 || "Lugar sem nome",
+        description:
+          sourceDescription?.trim().slice(0, 240) ||
+          `${categoryLabels.get(category) ?? "Lugar"}${
+            nearbyArea ? ` em ${nearbyArea}` : ""
+          }.`,
+        address: properties.formatted,
+        category: properties.categories?.[0] ?? category,
+        lat: properties.lat,
+        lon: properties.lon,
+      };
+    });
 
     response.json(places);
   } catch (error) {
