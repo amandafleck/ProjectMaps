@@ -7,3 +7,5 @@ client/dist/
 server/.env
 server/.env.local
 npm-debug.log*
+server/data/
+.vercel
